@@ -1,0 +1,28 @@
+export type MetricKey = "cpu" | "memory" | "disk" | "gpu";
+export type RangeKey = "1h" | "6h" | "24h";
+export type StepKey = "30s" | "1m";
+
+export interface OverviewItem {
+  metric: MetricKey;
+  label: string;
+  value: number;
+  unit: string;
+}
+
+export interface OverviewResponse {
+  generatedAt: string;
+  items: OverviewItem[];
+}
+
+export interface TimeseriesPoint {
+  timestamp: string;
+  value: number;
+  unit: string;
+}
+
+export interface TimeseriesResponse {
+  metric: MetricKey;
+  range: RangeKey;
+  step: StepKey;
+  series: TimeseriesPoint[];
+}

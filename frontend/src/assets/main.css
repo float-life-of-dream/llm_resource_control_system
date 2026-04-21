@@ -1,0 +1,21 @@
+:root {
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+  color: #f5f7fb;
+  background: #06111f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

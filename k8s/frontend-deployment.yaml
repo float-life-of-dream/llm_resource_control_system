@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-monitor-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-monitor-frontend
+  template:
+    metadata:
+      labels:
+        app: ai-monitor-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ai-monitor/frontend:latest
+          ports:
+            - containerPort: 80
