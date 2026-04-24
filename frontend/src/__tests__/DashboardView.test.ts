@@ -26,9 +26,17 @@ describe("DashboardView", () => {
     const wrapper = mount(DashboardView, {
       global: {
         stubs: {
+          MonitorChart: {
+            template: '<div data-testid="monitor-chart-stub"></div>',
+          },
+          PageHeader: {
+            template: '<div>Dashboard</div>',
+          },
+          StatCard: {
+            template: '<div data-testid="stat-card-stub"></div>',
+          },
           "el-segmented": true,
           "el-alert": true,
-          "v-chart": true,
         },
       },
     });

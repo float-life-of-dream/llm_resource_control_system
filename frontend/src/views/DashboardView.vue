@@ -65,11 +65,11 @@ const metrics = [
   { metric: "gpu", label: "GPU", unit: "MiB" },
 ] as const;
 
-onMounted(() => {
+onMounted((): void => {
   void store.loadDashboard();
 });
 
-function handleRangeChange(value: string | number | boolean) {
+function handleRangeChange(value: string | number | boolean): void {
   void store.setRange(value as RangeKey);
 }
 </script>

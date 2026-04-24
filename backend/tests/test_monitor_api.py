@@ -3,7 +3,7 @@ from unittest.mock import patch
 from app import create_app
 
 
-def test_health_endpoint():
+def test_health_endpoint() -> None:
     app = create_app()
     client = app.test_client()
 
@@ -14,7 +14,7 @@ def test_health_endpoint():
     assert payload["status"] == "ok"
 
 
-def test_overview_endpoint():
+def test_overview_endpoint() -> None:
     app = create_app()
     client = app.test_client()
 
@@ -30,7 +30,7 @@ def test_overview_endpoint():
     assert response.get_json()["items"][0]["metric"] == "cpu"
 
 
-def test_timeseries_endpoint():
+def test_timeseries_endpoint() -> None:
     app = create_app()
     client = app.test_client()
 

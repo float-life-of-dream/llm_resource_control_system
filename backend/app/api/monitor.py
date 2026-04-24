@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
@@ -26,7 +28,7 @@ def _build_service() -> MonitorService:
 @blp.route("/overview")
 class OverviewResource(MethodView):
     @blp.response(200, OverviewResponseSchema)
-    def get(self):
+    def get(self) -> dict[str, Any]:
         try:
             return _build_service().get_overview()
         except PrometheusClientError as exc:
@@ -37,7 +39,7 @@ class OverviewResource(MethodView):
 class TimeseriesResource(MethodView):
     @blp.arguments(TimeseriesQuerySchema, location="query")
     @blp.response(200, TimeseriesResponseSchema)
-    def get(self, args):
+    def get(self, args: dict[str, Any]) -> dict[str, Any]:
         try:
             return _build_service().get_timeseries(args["metric"], args["range"], args["step"])
         except PrometheusClientError as exc:

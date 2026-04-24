@@ -18,7 +18,7 @@ const props = defineProps<{
   generatedAt: string;
 }>();
 
-const formattedTime = computed(() => {
+const formattedTime = computed((): string => {
   if (!props.generatedAt) {
     return "";
   }

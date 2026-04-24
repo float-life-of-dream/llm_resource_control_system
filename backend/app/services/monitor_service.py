@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 
 METRIC_CONFIG = {
@@ -34,11 +35,11 @@ RANGE_TO_DELTA = {"1h": timedelta(hours=1), "6h": timedelta(hours=6), "24h": tim
 
 
 class MonitorService:
-    def __init__(self, prometheus_client):
+    def __init__(self, prometheus_client: Any) -> None:
         self.prometheus_client = prometheus_client
 
-    def get_overview(self):
-        items = []
+    def get_overview(self) -> dict[str, Any]:
+        items: list[dict[str, Any]] = []
         for metric, config in METRIC_CONFIG.items():
             data = self.prometheus_client.query(config["overview_query"])
             result = data.get("result", [])
@@ -56,7 +57,7 @@ class MonitorService:
 
         return {"generatedAt": datetime.now(UTC), "items": items}
 
-    def get_timeseries(self, metric: str, range_value: str, step: str):
+    def get_timeseries(self, metric: str, range_value: str, step: str) -> dict[str, Any]:
         config = METRIC_CONFIG[metric]
         now = datetime.now(UTC)
         start = now - RANGE_TO_DELTA[range_value]
@@ -67,7 +68,7 @@ class MonitorService:
             step,
         )
         result = data.get("result", [])
-        points = []
+        points: list[dict[str, Any]] = []
         if result:
             for timestamp, value in result[0].get("values", []):
                 points.append(

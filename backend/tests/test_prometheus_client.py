@@ -6,7 +6,7 @@ import requests
 from app.services.prometheus_client import PrometheusClient, PrometheusClientError
 
 
-def test_query_success():
+def test_query_success() -> None:
     response = Mock()
     response.json.return_value = {"status": "success", "data": {"result": []}}
     response.raise_for_status.return_value = None
@@ -16,14 +16,14 @@ def test_query_success():
         assert client.query("up") == {"result": []}
 
 
-def test_query_timeout():
+def test_query_timeout() -> None:
     with patch("app.services.prometheus_client.requests.get", side_effect=requests.Timeout):
         client = PrometheusClient("http://prometheus")
         with pytest.raises(PrometheusClientError, match="timed out"):
             client.query("up")
 
 
-def test_query_error_payload():
+def test_query_error_payload() -> None:
     response = Mock()
     response.json.return_value = {"status": "error", "error": "bad query"}
     response.raise_for_status.return_value = None

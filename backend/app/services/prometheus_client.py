@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 
@@ -14,10 +15,10 @@ class PrometheusClient:
     base_url: str
     timeout: float = 5.0
 
-    def query(self, promql: str):
+    def query(self, promql: str) -> dict[str, Any]:
         return self._request("/api/v1/query", {"query": promql})
 
-    def query_range(self, promql: str, start: str, end: str, step: str):
+    def query_range(self, promql: str, start: str, end: str, step: str) -> dict[str, Any]:
         return self._request(
             "/api/v1/query_range",
             {
@@ -28,7 +29,7 @@ class PrometheusClient:
             },
         )
 
-    def _request(self, path: str, params: dict):
+    def _request(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         try:
             response = requests.get(
                 f"{self.base_url.rstrip('/')}{path}",

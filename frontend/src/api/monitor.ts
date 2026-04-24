@@ -1,12 +1,16 @@
 import { http } from "./http";
 import type { MetricKey, OverviewResponse, RangeKey, StepKey, TimeseriesResponse } from "../types/monitor";
 
-export async function fetchOverview() {
+export async function fetchOverview(): Promise<OverviewResponse> {
   const { data } = await http.get<OverviewResponse>("/monitor/overview");
   return data;
 }
 
-export async function fetchTimeseries(metric: MetricKey, range: RangeKey, step: StepKey) {
+export async function fetchTimeseries(
+  metric: MetricKey,
+  range: RangeKey,
+  step: StepKey,
+): Promise<TimeseriesResponse> {
   const { data } = await http.get<TimeseriesResponse>("/monitor/timeseries", {
     params: { metric, range, step },
   });

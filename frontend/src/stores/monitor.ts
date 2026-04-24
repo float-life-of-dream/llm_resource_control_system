@@ -6,7 +6,15 @@ import type { MetricKey, OverviewItem, RangeKey, StepKey, TimeseriesPoint } from
 const DEFAULT_METRICS: MetricKey[] = ["cpu", "memory", "disk", "gpu"];
 
 export const useMonitorStore = defineStore("monitor", {
-  state: () => ({
+  state: (): {
+    range: RangeKey;
+    step: StepKey;
+    generatedAt: string;
+    overview: OverviewItem[];
+    seriesMap: Record<MetricKey, TimeseriesPoint[]>;
+    isLoading: boolean;
+    error: string;
+  } => ({
     range: "1h" as RangeKey,
     step: "1m" as StepKey,
     generatedAt: "",
@@ -16,7 +24,7 @@ export const useMonitorStore = defineStore("monitor", {
     error: "",
   }),
   actions: {
-    async loadDashboard() {
+    async loadDashboard(): Promise<void> {
       this.isLoading = true;
       this.error = "";
 
@@ -41,7 +49,7 @@ export const useMonitorStore = defineStore("monitor", {
         this.isLoading = false;
       }
     },
-    async setRange(range: RangeKey) {
+    async setRange(range: RangeKey): Promise<void> {
       this.range = range;
       await this.loadDashboard();
     },
