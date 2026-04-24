@@ -42,3 +42,6 @@ temp/
 
 # Nested repositories / unrelated worktrees
 llm_resource_control_system/
+
+# Local Windows Prometheus bundle
+prometheus-3.5.2.windows-amd64/
