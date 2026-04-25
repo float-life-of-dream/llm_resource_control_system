@@ -4,11 +4,9 @@ from flask import current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
-from app.schemas.monitor import (
-    OverviewResponseSchema,
-    TimeseriesQuerySchema,
-    TimeseriesResponseSchema,
-)
+from app.models import TenantRole
+from app.schemas.monitor import OverviewResponseSchema, TimeseriesQuerySchema, TimeseriesResponseSchema
+from app.security import role_required
 from app.services.monitor_service import MonitorService
 from app.services.prometheus_client import PrometheusClient, PrometheusClientError
 
@@ -25,6 +23,7 @@ def _build_service() -> MonitorService:
 
 @blp.route("/overview")
 class OverviewResource(MethodView):
+    @role_required(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.VIEWER)
     @blp.response(200, OverviewResponseSchema)
     def get(self):
         try:
@@ -35,6 +34,7 @@ class OverviewResource(MethodView):
 
 @blp.route("/timeseries")
 class TimeseriesResource(MethodView):
+    @role_required(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.VIEWER)
     @blp.arguments(TimeseriesQuerySchema, location="query")
     @blp.response(200, TimeseriesResponseSchema)
     def get(self, args):
@@ -42,4 +42,3 @@ class TimeseriesResource(MethodView):
             return _build_service().get_timeseries(args["metric"], args["range"], args["step"])
         except PrometheusClientError as exc:
             abort(502, message=str(exc))
-

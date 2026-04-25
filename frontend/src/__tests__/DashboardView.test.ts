@@ -26,6 +26,8 @@ describe("DashboardView", () => {
     const wrapper = mount(DashboardView, {
       global: {
         stubs: {
+          AdminLayout: { template: "<div><slot /></div>" },
+          RouterLink: true,
           "el-segmented": true,
           "el-alert": true,
           "v-chart": true,
