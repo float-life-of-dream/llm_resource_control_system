@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosHeaders, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 const ACCESS_TOKEN_KEY = "ai-monitor.access-token";
@@ -29,18 +29,19 @@ export const http = axios.create({
   timeout: 8000,
 });
 
-http.interceptors.request.use((config) => {
+http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token) {
+    config.headers = config.headers ?? new AxiosHeaders();
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
 http.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     if (error.response?.status !== 401 || originalRequest?._retry || !originalRequest) {
       return Promise.reject(error);
     }
@@ -55,7 +56,7 @@ http.interceptors.response.use(
     if (!refreshPromise) {
       refreshPromise = axios
         .post(`${baseURL}/auth/refresh`, { refreshToken })
-        .then((response) => {
+        .then((response: AxiosResponse<{ accessToken: string; refreshToken: string }>) => {
           setTokens(response.data.accessToken, response.data.refreshToken);
           return response.data.accessToken as string;
         })
@@ -73,7 +74,7 @@ http.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    originalRequest.headers = originalRequest.headers ?? {};
+    originalRequest.headers = originalRequest.headers ?? new AxiosHeaders();
     originalRequest.headers.Authorization = `Bearer ${accessToken}`;
     return http(originalRequest);
   },

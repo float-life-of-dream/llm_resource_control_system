@@ -27,10 +27,11 @@ describe("DashboardView", () => {
       global: {
         stubs: {
           AdminLayout: { template: "<div><slot /></div>" },
-          RouterLink: true,
+          PageHeader: { template: "<div>Dashboard</div>" },
+          StatCard: { template: "<div>Stat Card</div>" },
+          MonitorChart: { template: "<div>Monitor Chart</div>" },
           "el-segmented": true,
           "el-alert": true,
-          "v-chart": true,
         },
       },
     });
