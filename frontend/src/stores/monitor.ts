@@ -28,7 +28,7 @@ export const useMonitorStore = defineStore("monitor", {
         const responses = await Promise.all(
           DEFAULT_METRICS.map((metric) => fetchTimeseries(metric, this.range, this.step)),
         );
-        this.seriesMap = responses.reduce(
+        this.seriesMap = responses.reduce<Record<MetricKey, TimeseriesPoint[]>>(
           (acc, item) => {
             acc[item.metric] = item.series;
             return acc;

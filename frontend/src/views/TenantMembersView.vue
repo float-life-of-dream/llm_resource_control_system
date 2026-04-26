@@ -4,7 +4,7 @@
       <PageHeader :generated-at="new Date().toISOString()" />
       <div class="toolbar">
         <h2>Tenant Members</h2>
-        <el-button v-if="canManage" type="primary" @click="dialogVisible = true">New Member</el-button>
+        <el-button v-if="canManage" type="primary" @click="openCreateDialog">New Member</el-button>
       </div>
       <el-table :data="members">
         <el-table-column prop="user.fullName" label="Name" />
@@ -23,11 +23,14 @@
       </el-table>
 
       <el-dialog v-model="dialogVisible" title="Create Member">
-        <el-form :model="form" label-position="top">
-          <el-form-item label="Full Name"><el-input v-model="form.fullName" /></el-form-item>
-          <el-form-item label="Email"><el-input v-model="form.email" /></el-form-item>
-          <el-form-item label="Password"><el-input v-model="form.password" show-password /></el-form-item>
-          <el-form-item label="Role">
+        <el-form ref="memberFormRef" :model="form" :rules="memberRules" label-position="top">
+          <el-form-item label="Full Name" prop="fullName"><el-input v-model="form.fullName" /></el-form-item>
+          <el-form-item label="Email" prop="email"><el-input v-model="form.email" /></el-form-item>
+          <el-form-item label="Password" prop="password">
+            <el-input v-model="form.password" show-password />
+            <div class="field-hint">Password must be at least 8 characters.</div>
+          </el-form-item>
+          <el-form-item label="Role" prop="role">
             <el-select v-model="form.role">
               <el-option label="Owner" value="owner" />
               <el-option label="Admin" value="admin" />
@@ -46,6 +49,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
+import { ElMessage } from "element-plus";
+import type { FormInstance, FormRules } from "element-plus";
 
 import { createTenantMember, deleteTenantMember, fetchTenantMembers, updateTenantMember } from "../api/tenant";
 import AdminLayout from "../layouts/AdminLayout.vue";
@@ -56,6 +61,7 @@ import type { Membership, TenantRole } from "../types/auth";
 const authStore = useAuthStore();
 const members = ref<Membership[]>([]);
 const dialogVisible = ref(false);
+const memberFormRef = ref<FormInstance>();
 const form = reactive({
   fullName: "",
   email: "",
@@ -63,19 +69,45 @@ const form = reactive({
   role: "viewer" as TenantRole,
 });
 const canManage = computed(() => ["owner", "admin"].includes(authStore.membershipRole ?? ""));
+const memberRules: FormRules = {
+  fullName: [{ required: true, message: "Full name is required.", trigger: "blur" }],
+  email: [
+    { required: true, message: "Email is required.", trigger: "blur" },
+    { type: "email", message: "Please enter a valid email address.", trigger: ["blur", "change"] },
+  ],
+  password: [
+    { required: true, message: "Password is required.", trigger: "blur" },
+    { min: 8, message: "Password must be at least 8 characters.", trigger: ["blur", "change"] },
+  ],
+  role: [{ required: true, message: "Role is required.", trigger: "change" }],
+};
 
 async function loadMembers() {
   members.value = (await fetchTenantMembers()).items;
 }
 
+function openCreateDialog() {
+  memberFormRef.value?.clearValidate();
+  dialogVisible.value = true;
+}
+
 async function createMember() {
-  await createTenantMember(form);
-  dialogVisible.value = false;
-  form.fullName = "";
-  form.email = "";
-  form.password = "";
-  form.role = "viewer";
-  await loadMembers();
+  const isValid = await memberFormRef.value?.validate().catch(() => false);
+  if (!isValid) {
+    return;
+  }
+
+  try {
+    await createTenantMember(form);
+    dialogVisible.value = false;
+    form.fullName = "";
+    form.email = "";
+    form.password = "";
+    form.role = "viewer";
+    await loadMembers();
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "Failed to create member.");
+  }
 }
 
 async function updateRole(membershipId: string, value: string | number | boolean) {
@@ -103,5 +135,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.field-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8fa3bf;
 }
 </style>

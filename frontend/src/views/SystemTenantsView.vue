@@ -28,11 +28,14 @@
       </el-dialog>
 
       <el-dialog v-model="memberDialog" title="Create Tenant Member">
-        <el-form :model="memberForm" label-position="top">
-          <el-form-item label="Full Name"><el-input v-model="memberForm.fullName" /></el-form-item>
-          <el-form-item label="Email"><el-input v-model="memberForm.email" /></el-form-item>
-          <el-form-item label="Password"><el-input v-model="memberForm.password" show-password /></el-form-item>
-          <el-form-item label="Role">
+        <el-form ref="memberFormRef" :model="memberForm" :rules="memberRules" label-position="top">
+          <el-form-item label="Full Name" prop="fullName"><el-input v-model="memberForm.fullName" /></el-form-item>
+          <el-form-item label="Email" prop="email"><el-input v-model="memberForm.email" /></el-form-item>
+          <el-form-item label="Password" prop="password">
+            <el-input v-model="memberForm.password" show-password />
+            <div class="field-hint">Password must be at least 8 characters.</div>
+          </el-form-item>
+          <el-form-item label="Role" prop="role">
             <el-select v-model="memberForm.role">
               <el-option label="Owner" value="owner" />
               <el-option label="Admin" value="admin" />
@@ -51,6 +54,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import { ElMessage } from "element-plus";
+import type { FormInstance, FormRules } from "element-plus";
 
 import { createSystemTenant, createSystemTenantMember, fetchSystemTenants } from "../api/system";
 import PageHeader from "../components/PageHeader.vue";
@@ -60,6 +65,7 @@ import type { TenantProfile, TenantRole } from "../types/auth";
 const tenants = ref<TenantProfile[]>([]);
 const tenantDialog = ref(false);
 const memberDialog = ref(false);
+const memberFormRef = ref<FormInstance>();
 const selectedTenantId = ref("");
 const tenantForm = reactive({ name: "", slug: "" });
 const memberForm = reactive({
@@ -68,6 +74,18 @@ const memberForm = reactive({
   password: "",
   role: "owner" as TenantRole,
 });
+const memberRules: FormRules = {
+  fullName: [{ required: true, message: "Full name is required.", trigger: "blur" }],
+  email: [
+    { required: true, message: "Email is required.", trigger: "blur" },
+    { type: "email", message: "Please enter a valid email address.", trigger: ["blur", "change"] },
+  ],
+  password: [
+    { required: true, message: "Password is required.", trigger: "blur" },
+    { min: 8, message: "Password must be at least 8 characters.", trigger: ["blur", "change"] },
+  ],
+  role: [{ required: true, message: "Role is required.", trigger: "change" }],
+};
 
 async function load() {
   tenants.value = (await fetchSystemTenants()).items;
@@ -75,6 +93,7 @@ async function load() {
 
 function openMemberDialog(tenantId: string) {
   selectedTenantId.value = tenantId;
+  memberFormRef.value?.clearValidate();
   memberDialog.value = true;
 }
 
@@ -87,12 +106,21 @@ async function createTenantAction() {
 }
 
 async function createTenantMemberAction() {
-  await createSystemTenantMember(selectedTenantId.value, memberForm);
-  memberDialog.value = false;
-  memberForm.fullName = "";
-  memberForm.email = "";
-  memberForm.password = "";
-  memberForm.role = "owner";
+  const isValid = await memberFormRef.value?.validate().catch(() => false);
+  if (!isValid) {
+    return;
+  }
+
+  try {
+    await createSystemTenantMember(selectedTenantId.value, memberForm);
+    memberDialog.value = false;
+    memberForm.fullName = "";
+    memberForm.email = "";
+    memberForm.password = "";
+    memberForm.role = "owner";
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "Failed to create tenant member.");
+  }
 }
 
 onMounted(() => {
@@ -110,5 +138,11 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.field-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8fa3bf;
 }
 </style>
