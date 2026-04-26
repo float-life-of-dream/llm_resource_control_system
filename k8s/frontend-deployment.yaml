@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-monitor-frontend
+  labels:
+    app: ai-monitor-frontend
 spec:
   replicas: 1
   selector:
@@ -12,8 +14,30 @@ spec:
       labels:
         app: ai-monitor-frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-auth
       containers:
         - name: frontend
-          image: ai-monitor/frontend:latest
+          image: ghcr.io/float-life-of-dream/ai-control-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
