@@ -17,7 +17,6 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
-package-lock.json
 
 # Environment files
 .env
