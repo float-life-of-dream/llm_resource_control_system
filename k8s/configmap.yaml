@@ -3,6 +3,12 @@ kind: ConfigMap
 metadata:
   name: ai-monitor-config
 data:
+  FRONTEND_ORIGIN: "http://localhost:8080,http://localhost:5173"
+  JWT_ACCESS_TTL_MINUTES: "15"
+  JWT_REFRESH_TTL_DAYS: "7"
+  BOOTSTRAP_ADMIN_EMAIL: "admin@example.local"
+  BOOTSTRAP_DEFAULT_TENANT_NAME: "Default Tenant"
+  BOOTSTRAP_DEFAULT_TENANT_SLUG: "default"
   PROMETHEUS_BASE_URL: "http://prometheus:9090"
   PROMETHEUS_TIMEOUT: "5"
   POSTGRES_HOST: "postgres"

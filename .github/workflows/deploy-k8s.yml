@@ -1,0 +1,130 @@
+name: Deploy K8S
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment to use for vars/secrets
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      namespace:
+        description: Kubernetes namespace
+        required: true
+        default: ai-monitor
+        type: string
+      image_tag:
+        description: Image tag to deploy
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ai-control-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ai-control-backend
+  CONFIGMAP_NAME: ai-monitor-config
+  SECRET_NAME: ai-monitor-secrets
+  PULL_SECRET_NAME: ghcr-auth
+
+jobs:
+  deploy:
+    name: Deploy To Kubernetes
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      KUBE_NAMESPACE: ${{ inputs.namespace }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN || 'http://localhost:8080,http://localhost:5173' }}
+      JWT_ACCESS_TTL_MINUTES: ${{ vars.JWT_ACCESS_TTL_MINUTES || '15' }}
+      JWT_REFRESH_TTL_DAYS: ${{ vars.JWT_REFRESH_TTL_DAYS || '7' }}
+      BOOTSTRAP_ADMIN_EMAIL: ${{ vars.BOOTSTRAP_ADMIN_EMAIL || 'admin@example.local' }}
+      BOOTSTRAP_DEFAULT_TENANT_NAME: ${{ vars.BOOTSTRAP_DEFAULT_TENANT_NAME || 'Default Tenant' }}
+      BOOTSTRAP_DEFAULT_TENANT_SLUG: ${{ vars.BOOTSTRAP_DEFAULT_TENANT_SLUG || 'default' }}
+      PROMETHEUS_BASE_URL: ${{ vars.PROMETHEUS_BASE_URL || 'http://prometheus:9090' }}
+      PROMETHEUS_TIMEOUT: ${{ vars.PROMETHEUS_TIMEOUT || '5' }}
+      POSTGRES_HOST: ${{ vars.POSTGRES_HOST || 'postgres' }}
+      POSTGRES_PORT: ${{ vars.POSTGRES_PORT || '5432' }}
+      POSTGRES_DB: ${{ vars.POSTGRES_DB || 'ai_monitor' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Configure kubeconfig
+        shell: bash
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p "${HOME}/.kube"
+          echo "${KUBE_CONFIG_DATA}" | base64 --decode > "${HOME}/.kube/config"
+
+      - name: Ensure namespace exists
+        run: kubectl create namespace "${KUBE_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or update GHCR pull secret
+        run: |
+          kubectl create secret docker-registry "${PULL_SECRET_NAME}" \
+            --namespace "${KUBE_NAMESPACE}" \
+            --docker-server="${REGISTRY}" \
+            --docker-username="${GHCR_USERNAME}" \
+            --docker-password="${GHCR_TOKEN}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or update config map
+        run: |
+          kubectl create configmap "${CONFIGMAP_NAME}" \
+            --namespace "${KUBE_NAMESPACE}" \
+            --from-literal=FRONTEND_ORIGIN="${FRONTEND_ORIGIN}" \
+            --from-literal=JWT_ACCESS_TTL_MINUTES="${JWT_ACCESS_TTL_MINUTES}" \
+            --from-literal=JWT_REFRESH_TTL_DAYS="${JWT_REFRESH_TTL_DAYS}" \
+            --from-literal=BOOTSTRAP_ADMIN_EMAIL="${BOOTSTRAP_ADMIN_EMAIL}" \
+            --from-literal=BOOTSTRAP_DEFAULT_TENANT_NAME="${BOOTSTRAP_DEFAULT_TENANT_NAME}" \
+            --from-literal=BOOTSTRAP_DEFAULT_TENANT_SLUG="${BOOTSTRAP_DEFAULT_TENANT_SLUG}" \
+            --from-literal=PROMETHEUS_BASE_URL="${PROMETHEUS_BASE_URL}" \
+            --from-literal=PROMETHEUS_TIMEOUT="${PROMETHEUS_TIMEOUT}" \
+            --from-literal=POSTGRES_HOST="${POSTGRES_HOST}" \
+            --from-literal=POSTGRES_PORT="${POSTGRES_PORT}" \
+            --from-literal=POSTGRES_DB="${POSTGRES_DB}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or update application secret
+        run: |
+          kubectl create secret generic "${SECRET_NAME}" \
+            --namespace "${KUBE_NAMESPACE}" \
+            --from-literal=DATABASE_URL="${DATABASE_URL}" \
+            --from-literal=JWT_SECRET_KEY="${JWT_SECRET_KEY}" \
+            --from-literal=BOOTSTRAP_ADMIN_PASSWORD="${BOOTSTRAP_ADMIN_PASSWORD}" \
+            --from-literal=POSTGRES_USER="${POSTGRES_USER}" \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -n "${KUBE_NAMESPACE}" -k k8s
+
+      - name: Set deployment images
+        run: |
+          kubectl set image deployment/ai-monitor-backend backend="${BACKEND_IMAGE}:${IMAGE_TAG}" -n "${KUBE_NAMESPACE}"
+          kubectl set image deployment/ai-monitor-frontend frontend="${FRONTEND_IMAGE}:${IMAGE_TAG}" -n "${KUBE_NAMESPACE}"
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/ai-monitor-backend -n "${KUBE_NAMESPACE}" --timeout=180s
+          kubectl rollout status deployment/ai-monitor-frontend -n "${KUBE_NAMESPACE}" --timeout=180s
+          kubectl rollout status statefulset/postgres -n "${KUBE_NAMESPACE}" --timeout=180s
