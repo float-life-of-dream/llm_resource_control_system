@@ -4,6 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.api.auth import blp as auth_blp
+from app.api.analysis import blp as analysis_blp
 from app.api.health import blp as health_blp
 from app.api.monitor import blp as monitor_blp
 from app.api.system import blp as system_blp
@@ -29,6 +30,7 @@ def create_app(test_config: dict | None = None):
     api.register_blueprint(system_blp)
     api.register_blueprint(tenant_blp)
     api.register_blueprint(monitor_blp)
+    api.register_blueprint(analysis_blp)
 
     with app.app_context():
         bootstrap_security()

@@ -31,6 +31,7 @@ class Tenant(db.Model):
 
     memberships = relationship("TenantMembership", back_populates="tenant", cascade="all, delete-orphan")
     refresh_sessions = relationship("RefreshTokenSession", back_populates="tenant")
+    analysis_sessions = relationship("AnalysisSession", back_populates="tenant", cascade="all, delete-orphan")
 
 
 class User(db.Model):
@@ -47,6 +48,7 @@ class User(db.Model):
 
     memberships = relationship("TenantMembership", back_populates="user", cascade="all, delete-orphan")
     refresh_sessions = relationship("RefreshTokenSession", back_populates="user", cascade="all, delete-orphan")
+    analysis_sessions = relationship("AnalysisSession", back_populates="user", cascade="all, delete-orphan")
 
 
 class TenantMembership(db.Model):
@@ -80,4 +82,60 @@ class RefreshTokenSession(db.Model):
 
     user = relationship("User", back_populates="refresh_sessions")
     tenant = relationship("Tenant", back_populates="refresh_sessions")
+
+
+class AnalysisStatus(str, enum.Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class AnalysisSession(db.Model):
+    __tablename__ = "analysis_sessions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = db.Column(db.String(36), db.ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    range_value = db.Column(db.String(8), nullable=False)
+    log_query = db.Column(db.String(255), nullable=True)
+    log_limit = db.Column(db.Integer, nullable=False)
+    include_metrics = db.Column(db.Boolean, nullable=False, default=True)
+    status = db.Column(db.Enum(AnalysisStatus), nullable=False, default=AnalysisStatus.PENDING)
+    model_name = db.Column(db.String(128), nullable=False)
+    duration_ms = db.Column(db.Integer, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    tenant = relationship("Tenant", back_populates="analysis_sessions")
+    user = relationship("User", back_populates="analysis_sessions")
+    result = relationship("AnalysisResult", back_populates="session", uselist=False, cascade="all, delete-orphan")
+    evidence = relationship("AnalysisEvidence", back_populates="session", uselist=False, cascade="all, delete-orphan")
+
+
+class AnalysisResult(db.Model):
+    __tablename__ = "analysis_results"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    analysis_session_id = db.Column(db.String(36), db.ForeignKey("analysis_sessions.id"), nullable=False, unique=True, index=True)
+    summary = db.Column(db.Text, nullable=True)
+    anomalies = db.Column(db.JSON, nullable=False, default=list)
+    recommendations = db.Column(db.JSON, nullable=False, default=list)
+    raw_model_output = db.Column(db.Text, nullable=True)
+    risk_metadata = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    session = relationship("AnalysisSession", back_populates="result")
+
+
+class AnalysisEvidence(db.Model):
+    __tablename__ = "analysis_evidence"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    analysis_session_id = db.Column(db.String(36), db.ForeignKey("analysis_sessions.id"), nullable=False, unique=True, index=True)
+    metrics_snapshot = db.Column(db.JSON, nullable=False, default=dict)
+    log_excerpt = db.Column(db.JSON, nullable=False, default=list)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    session = relationship("AnalysisSession", back_populates="evidence")
 

@@ -27,6 +27,8 @@
         </div>
         <div v-else class="state-panel">No overview data available.</div>
 
+        <AnalysisPanel :range="store.range" />
+
         <div class="charts-grid">
           <MonitorChart
             v-for="metric in metrics"
@@ -45,6 +47,7 @@
 import { onMounted } from "vue";
 
 import AdminLayout from "../layouts/AdminLayout.vue";
+import AnalysisPanel from "../components/AnalysisPanel.vue";
 import MonitorChart from "../components/MonitorChart.vue";
 import PageHeader from "../components/PageHeader.vue";
 import StatCard from "../components/StatCard.vue";
