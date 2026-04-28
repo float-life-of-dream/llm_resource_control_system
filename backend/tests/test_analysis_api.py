@@ -112,6 +112,7 @@ def test_analysis_history_is_tenant_scoped():
         )
         db.session.add(session)
         db.session.flush()
+        analysis_id = session.id
         db.session.add(
             AnalysisResult(
                 analysis_session_id=session.id,
@@ -134,7 +135,7 @@ def test_analysis_history_is_tenant_scoped():
     assert response.status_code == 200
     assert response.get_json()["items"] == []
 
-    detail = client.get(f"/api/analysis/history/{session.id}", headers=auth_header(demo["accessToken"]))
+    detail = client.get(f"/api/analysis/history/{analysis_id}", headers=auth_header(demo["accessToken"]))
     assert detail.status_code == 404
 
     other_response = client.get("/api/analysis/history", headers=auth_header(other["accessToken"]))
