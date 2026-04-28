@@ -29,6 +29,7 @@ describe("DashboardView", () => {
           AdminLayout: { template: "<div><slot /></div>" },
           PageHeader: { template: "<div>Dashboard</div>" },
           StatCard: { template: "<div>Stat Card</div>" },
+          AnalysisPanel: { template: "<div>AI Analysis</div>" },
           MonitorChart: { template: "<div>Monitor Chart</div>" },
           "el-segmented": true,
           "el-alert": true,

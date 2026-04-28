@@ -39,3 +39,38 @@ CREATE TABLE refresh_token_sessions (
     created_at TIMESTAMPTZ NOT NULL,
     last_used_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE analysis_sessions (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+    range_value VARCHAR(8) NOT NULL,
+    log_query VARCHAR(255),
+    log_limit INTEGER NOT NULL,
+    include_metrics BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(32) NOT NULL,
+    model_name VARCHAR(128) NOT NULL,
+    duration_ms INTEGER,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE analysis_results (
+    id VARCHAR(36) PRIMARY KEY,
+    analysis_session_id VARCHAR(36) NOT NULL UNIQUE REFERENCES analysis_sessions(id),
+    summary TEXT,
+    anomalies JSON NOT NULL,
+    recommendations JSON NOT NULL,
+    raw_model_output TEXT,
+    risk_metadata JSON,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE analysis_evidence (
+    id VARCHAR(36) PRIMARY KEY,
+    analysis_session_id VARCHAR(36) NOT NULL UNIQUE REFERENCES analysis_sessions(id),
+    metrics_snapshot JSON NOT NULL,
+    log_excerpt JSON NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);

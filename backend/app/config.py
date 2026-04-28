@@ -40,6 +40,16 @@ class Config:
 
     PROMETHEUS_BASE_URL = os.getenv("PROMETHEUS_BASE_URL", "http://prometheus:9090")
     PROMETHEUS_TIMEOUT = float(os.getenv("PROMETHEUS_TIMEOUT", "5"))
+    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "30"))
+    ELASTICSEARCH_BASE_URL = os.getenv("ELASTICSEARCH_BASE_URL", "http://localhost:9200")
+    ELASTICSEARCH_USERNAME = os.getenv("ELASTICSEARCH_USERNAME", "")
+    ELASTICSEARCH_PASSWORD = os.getenv("ELASTICSEARCH_PASSWORD", "")
+    ELASTICSEARCH_INDEX = os.getenv("ELASTICSEARCH_INDEX", "logs-*")
+    ELASTICSEARCH_TIMEOUT = float(os.getenv("ELASTICSEARCH_TIMEOUT", "10"))
+    ANALYSIS_LOG_LIMIT_DEFAULT = int(os.getenv("ANALYSIS_LOG_LIMIT_DEFAULT", "50"))
+    ANALYSIS_LOG_LIMIT_MAX = int(os.getenv("ANALYSIS_LOG_LIMIT_MAX", "200"))
 
     BOOTSTRAP_ADMIN_EMAIL = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "admin@example.local")
     BOOTSTRAP_ADMIN_PASSWORD = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "ChangeMe123!")

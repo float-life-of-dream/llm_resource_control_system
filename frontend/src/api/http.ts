@@ -29,6 +29,11 @@ export const http = axios.create({
   timeout: 8000,
 });
 
+function toApiError(error: AxiosError) {
+  const payload = error.response?.data as { message?: string; description?: string } | undefined;
+  return new Error(payload?.message || payload?.description || error.message);
+}
+
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token) {
@@ -43,13 +48,13 @@ http.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     if (error.response?.status !== 401 || originalRequest?._retry || !originalRequest) {
-      return Promise.reject(error);
+      return Promise.reject(toApiError(error));
     }
 
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
       clearTokens();
-      return Promise.reject(error);
+      return Promise.reject(toApiError(error));
     }
 
     originalRequest._retry = true;
@@ -71,7 +76,7 @@ http.interceptors.response.use(
 
     const accessToken = await refreshPromise;
     if (!accessToken) {
-      return Promise.reject(error);
+      return Promise.reject(toApiError(error));
     }
 
     originalRequest.headers = originalRequest.headers ?? new AxiosHeaders();
