@@ -66,6 +66,11 @@ const metrics = [
   { metric: "memory", label: "Memory", unit: "GiB" },
   { metric: "disk", label: "Disk", unit: "%" },
   { metric: "gpu", label: "GPU", unit: "MiB" },
+  { metric: "gpu_utilization", label: "GPU Utilization", unit: "%" },
+  { metric: "gpu_memory_used", label: "GPU Memory", unit: "MiB" },
+  { metric: "gpu_memory_utilization", label: "GPU Memory %", unit: "%" },
+  { metric: "gpu_temperature", label: "GPU Temperature", unit: "C" },
+  { metric: "gpu_power_usage", label: "GPU Power", unit: "W" },
 ] as const;
 
 onMounted(() => {

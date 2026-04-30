@@ -3,7 +3,17 @@ import { defineStore } from "pinia";
 import { fetchOverview, fetchTimeseries } from "../api/monitor";
 import type { MetricKey, OverviewItem, RangeKey, StepKey, TimeseriesPoint } from "../types/monitor";
 
-const DEFAULT_METRICS: MetricKey[] = ["cpu", "memory", "disk", "gpu"];
+const DEFAULT_METRICS: MetricKey[] = [
+  "cpu",
+  "memory",
+  "disk",
+  "gpu",
+  "gpu_memory_used",
+  "gpu_memory_utilization",
+  "gpu_utilization",
+  "gpu_temperature",
+  "gpu_power_usage",
+];
 
 export const useMonitorStore = defineStore("monitor", {
   state: () => ({

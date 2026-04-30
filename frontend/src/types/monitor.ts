@@ -1,4 +1,13 @@
-export type MetricKey = "cpu" | "memory" | "disk" | "gpu";
+export type MetricKey =
+  | "cpu"
+  | "memory"
+  | "disk"
+  | "gpu"
+  | "gpu_memory_used"
+  | "gpu_memory_utilization"
+  | "gpu_utilization"
+  | "gpu_temperature"
+  | "gpu_power_usage";
 export type RangeKey = "1h" | "6h" | "24h";
 export type StepKey = "30s" | "1m";
 

@@ -27,6 +27,8 @@ jobs:
             context: ./frontend
           - image_name: ai-control-mock-prometheus
             context: ./mock-prometheus
+          - image_name: ai-control-ollama-exporter
+            context: ./ollama-exporter
 
     steps:
       - name: Checkout repository

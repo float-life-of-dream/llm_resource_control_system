@@ -7,6 +7,7 @@
       </div>
       <nav class="nav">
         <RouterLink to="/">Dashboard</RouterLink>
+        <RouterLink to="/models">Model Monitor</RouterLink>
         <RouterLink v-if="canManageTenant" to="/tenant/members">Members</RouterLink>
         <RouterLink v-if="canManageTenant" to="/tenant/settings">Tenant Settings</RouterLink>
         <RouterLink to="/sessions">My Sessions</RouterLink>

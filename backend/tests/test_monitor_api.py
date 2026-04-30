@@ -115,6 +115,24 @@ def test_viewer_can_access_monitor(client):
     assert response.get_json()["items"][0]["metric"] == "cpu"
 
 
+def test_viewer_can_access_gpu_depth_timeseries(client):
+    login_payload = login(client, "demo", "viewer@example.local", "Password123!")
+    with patch("app.api.monitor._build_service") as service_factory:
+        service_factory.return_value.get_timeseries.return_value = {
+            "metric": "gpu_utilization",
+            "range": "1h",
+            "step": "1m",
+            "series": [],
+        }
+        response = client.get(
+            "/api/monitor/timeseries?metric=gpu_utilization&range=1h&step=1m",
+            headers=auth_header(login_payload["accessToken"]),
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["metric"] == "gpu_utilization"
+
+
 def test_system_admin_can_create_tenant(client):
     login_payload = login(client, "system", "sysadmin@example.local", "ChangeMe123!")
     response = client.post(

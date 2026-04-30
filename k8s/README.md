@@ -9,6 +9,7 @@ Images are published to GHCR by `.github/workflows/publish-images.yml`:
 - `ghcr.io/<owner>/ai-control-backend`
 - `ghcr.io/<owner>/ai-control-frontend`
 - `ghcr.io/<owner>/ai-control-mock-prometheus`
+- `ghcr.io/<owner>/ai-control-ollama-exporter`
 
 Published tags:
 
@@ -32,6 +33,9 @@ Create GitHub Environments such as `staging` and `production`, then configure:
 - `OLLAMA_BASE_URL`
 - `OLLAMA_MODEL`
 - `OLLAMA_TIMEOUT`
+- `OLLAMA_EXPORTER_TARGET_URL`
+- `OLLAMA_EXPORTER_TIMEOUT`
+- `OLLAMA_EXPORTER_PORT`
 - `ELASTICSEARCH_BASE_URL`
 - `ELASTICSEARCH_INDEX`
 - `ELASTICSEARCH_TIMEOUT`
@@ -70,4 +74,41 @@ The workflow will:
 - create/update ConfigMap and Secret from GitHub Environment values
 - apply the base manifests
 - set backend/frontend images to the requested tag
+- set the ollama-exporter image to the requested tag
 - wait for rollout completion
+
+## Prometheus stack
+
+The default `kustomization.yaml` now includes:
+
+- `prometheus`
+- `node-exporter`
+- `ollama-exporter`
+- `ollama`
+- `backend`
+- `frontend`
+- `postgres`
+
+GPU metrics remain optional. To enable them, apply:
+
+- `k8s/dcgm-exporter-daemonset.yaml`
+- `k8s/dcgm-exporter-service.yaml`
+
+Metric dependencies:
+
+- CPU / memory / disk: `node-exporter`
+- GPU: `dcgm-exporter`
+- App / HTTP / analysis metrics: backend `/metrics`
+- Loaded Ollama models and proxied inference metrics: `ollama-exporter`
+
+## Model monitor
+
+The model monitor page uses backend APIs under `/api/model-monitor/*`. Backend reads model metrics from Prometheus, while `ollama-exporter` scrapes `OLLAMA_EXPORTER_TARGET_URL` through Ollama `/api/ps` and `/api/show`.
+
+The base manifests include an in-cluster Ollama StatefulSet exposed as `http://ollama:11434`. For inference latency, throughput, and concurrency to be counted, Ollama requests must go through `ollama-exporter` at `http://ollama-exporter:9500`. The default backend `OLLAMA_BASE_URL` is set to that service.
+
+Pull the configured model after first deployment:
+
+```bash
+kubectl exec -n ai-monitor statefulset/ollama -- ollama pull llama3.1:8b
+```

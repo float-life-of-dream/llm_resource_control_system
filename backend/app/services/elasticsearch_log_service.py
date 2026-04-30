@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from time import perf_counter
 
 import requests
+
+from app.extensions.metrics import ELASTICSEARCH_QUERY_DURATION_SECONDS
 
 
 class ElasticsearchLogError(RuntimeError):
@@ -64,6 +67,7 @@ class ElasticsearchLogService:
             ]
 
         auth = (self.username, self.password) if self.username else None
+        started_at = perf_counter()
         try:
             response = requests.post(
                 f"{self.base_url.rstrip('/')}/{self.index}/_search",
@@ -73,9 +77,12 @@ class ElasticsearchLogService:
             )
             response.raise_for_status()
         except requests.Timeout as exc:
+            ELASTICSEARCH_QUERY_DURATION_SECONDS.observe(perf_counter() - started_at)
             raise ElasticsearchLogError("Elasticsearch request timed out") from exc
         except requests.RequestException as exc:
+            ELASTICSEARCH_QUERY_DURATION_SECONDS.observe(perf_counter() - started_at)
             raise ElasticsearchLogError("Elasticsearch request failed") from exc
+        ELASTICSEARCH_QUERY_DURATION_SECONDS.observe(perf_counter() - started_at)
 
         data = response.json()
         hits = data.get("hits", {}).get("hits", [])

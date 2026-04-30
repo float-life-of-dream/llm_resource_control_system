@@ -1,96 +1,161 @@
-# AI 资源监测平台
+# AI Resource Monitor
 
-`AI-control` 是一个支持多租户登录、租户级 RBAC 和监控看板的后台系统，采用 `Vue 3 + Flask + PostgreSQL` 的前后端分离结构。前端始终访问 `/api/*`，后端通过 `JWT access token + refresh token` 维护会话，通过 `tenantSlug + email + password` 明确进入租户上下文。
+`AI-control` is a Vue 3 + Flask + PostgreSQL monitoring console for AI runtime resources. It supports multi-tenant login, tenant-level RBAC, Prometheus-based host metrics, Ollama model monitoring, and Ollama-assisted log/metric analysis.
 
-## 目录结构
+## Architecture
 
 ```text
 AI-control/
-├── backend/              # Flask API、SQLAlchemy、JWT、租户与成员管理
-├── frontend/             # Vue 3 + Vite + Element Plus + ECharts
-├── k8s/                  # Kubernetes 部署模板
-├── mock-prometheus/      # Prometheus API mock，仅用于本地 demo
-├── docker-compose.yml
-├── docker-compose.mock.yml
-├── .env.example
-└── README.md
+|-- backend/              # Flask API, auth, RBAC, monitor APIs, analysis APIs
+|-- frontend/             # Vue 3 + Vite + Element Plus + ECharts
+|-- mock-prometheus/      # Prometheus API mock for local demo mode
+|-- ollama-exporter/      # Ollama metadata and inference metric exporter
+|-- infra/prometheus/     # Prometheus scrape config
+|-- k8s/                  # Kubernetes manifests
+|-- docker-compose.yml
+|-- docker-compose.mock.yml
+|-- docker-compose.gpu.yml
+`-- .env.example
 ```
 
-## 核心能力
+## Core Features
 
-- 多租户登录：登录时显式输入 `tenantSlug`
-- 权限模型：
-  - 系统级：`system_admin`
-  - 租户级：`owner / admin / viewer`
-- 监控接口默认受保护，必须先登录后访问
-- 支持本地真实 Prometheus 和 mock Prometheus 两种数据源
+- Multi-tenant login with `tenantSlug + email + password`.
+- RBAC roles:
+  - System level: `system_admin`
+  - Tenant level: `owner / admin / viewer`
+- Protected monitor APIs. Users must log in before accessing monitor data.
+- Built-in Prometheus collector stack for local host metrics.
+- Optional mock Prometheus mode for stable local demo data.
+- Optional GPU metrics through `dcgm-exporter`.
+- Ollama model monitor page at `/models`.
+- Ollama + Elasticsearch powered AI analysis panel.
 
-## 默认引导账户
+## Default Account
 
-应用启动后会根据环境变量自动引导默认租户和系统管理员。
+The application bootstraps a default tenant and system admin from environment variables.
 
-- 默认租户：`default`
-- 默认管理员邮箱：`admin@example.local`
-- 默认管理员密码：`ChangeMe123!`
+- Tenant slug: `default`
+- Admin email: `admin@example.local`
+- Admin password: `ChangeMe123!`
 
-首次启动后请立即修改这些值。
+Change these values outside local development.
 
-## 本地运行
+## Local Deployment
 
-### 1. 配置环境变量
+Copy the environment example first:
 
 ```bash
 cp .env.example .env
 ```
 
-### 2. 启动后端
+Start the default local stack:
 
 ```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python run.py
+docker compose up -d --build
 ```
 
-Swagger 文档默认位于 `http://localhost:5000/api/docs/`。
+Default URLs:
 
-### 3. 启动前端
+- Frontend: `http://127.0.0.1:8080`
+- Backend: `http://127.0.0.1:5000`
+- Prometheus: `http://127.0.0.1:9090`
+- Ollama exporter: `http://127.0.0.1:9500`
+- PostgreSQL: `127.0.0.1:5432`
+
+If only some monitor services are missing, start them directly:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker compose up -d node-exporter ollama-exporter prometheus
 ```
 
-默认开发地址为 `http://localhost:5173`，并通过 Vite 代理访问后端 `/api`。
+## Prometheus Monitoring
 
-## Docker Compose
+The default Compose stack includes:
 
-### 真实 Prometheus 模式
+- `prometheus`
+- `node-exporter`
+- `backend /metrics`
+- `ollama-exporter /metrics`
+
+Prometheus config lives in:
+
+```text
+infra/prometheus/prometheus.yml
+```
+
+Main host metrics:
+
+- CPU, memory, disk: `node-exporter`
+- Backend HTTP and analysis metrics: backend `/metrics`
+- Ollama model and inference metrics: `ollama-exporter`
+- GPU metrics: optional `dcgm-exporter`
+
+## Ollama Model Monitor
+
+The model monitor page is available at:
+
+```text
+/models
+```
+
+It shows:
+
+- request rate
+- average latency
+- active requests
+- loaded model count
+- loaded model list
+- parameter size
+- quantization
+- context window
+- memory usage
+
+The exporter target defaults to:
+
+```env
+OLLAMA_EXPORTER_TARGET_URL=http://host.docker.internal:11434
+```
+
+For model metadata to appear, Ollama must be running on the host and at least one model must be loaded. If no model is loaded, the page will show `0` values and an empty model list.
+
+The backend default Ollama URL is:
+
+```env
+OLLAMA_BASE_URL=http://ollama-exporter:9500
+```
+
+This routes backend Ollama analysis requests through the exporter so request rate, latency, concurrency, and tokens-per-second can be counted.
+
+## GPU Metrics
+
+GPU metrics are optional and require NVIDIA runtime support.
+
+Start the GPU extension with:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 ```
 
-### Mock Demo 模式
+The GPU exporter exposes:
+
+```text
+dcgm-exporter:9400
+```
+
+## Mock Demo Mode
+
+Mock mode replaces the backend Prometheus source with `mock-prometheus`.
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.mock.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
 ```
 
-此模式会额外启动 `mock-prometheus` 服务，并把后端 `PROMETHEUS_BASE_URL` 覆盖为 `http://mock-prometheus:9090`。即使在 demo 模式下，监控接口也仍然要求先登录。
+This mode is for stable host-monitor demo data. It does not mock Ollama model monitoring. The model monitor still depends on a real Ollama exporter and a real or reachable Ollama instance.
 
-默认暴露：
+## Key APIs
 
-- 前端：`http://localhost:8080`
-- 后端：`http://localhost:5000`
-- PostgreSQL：`localhost:5432`
-- Mock Prometheus：`http://localhost:9090`
-
-## 主要接口
-
-认证与会话：
+Auth:
 
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
@@ -99,13 +164,24 @@ docker compose -f docker-compose.yml -f docker-compose.mock.yml up --build
 - `GET /api/auth/sessions`
 - `DELETE /api/auth/sessions/{sessionId}`
 
-系统管理员：
+Host monitor:
 
-- `GET /api/system/tenants`
-- `POST /api/system/tenants`
-- `POST /api/system/tenants/{tenantId}/members`
+- `GET /api/monitor/overview`
+- `GET /api/monitor/timeseries?metric=cpu|memory|disk|gpu&range=1h|6h|24h&step=30s|1m`
 
-租户管理：
+Model monitor:
+
+- `GET /api/model-monitor/overview`
+- `GET /api/model-monitor/models`
+- `GET /api/model-monitor/timeseries?metric=request_rate|latency|concurrency&range=1h|6h|24h&step=30s|1m`
+
+AI analysis:
+
+- `POST /api/analysis/run`
+- `GET /api/analysis/history`
+- `GET /api/analysis/history/{analysisId}`
+
+Tenant management:
 
 - `GET /api/tenant`
 - `PATCH /api/tenant`
@@ -114,45 +190,124 @@ docker compose -f docker-compose.yml -f docker-compose.mock.yml up --build
 - `PATCH /api/tenant/members/{membershipId}`
 - `DELETE /api/tenant/members/{membershipId}`
 
-监控接口：
+System admin:
 
-- `GET /api/health`
-- `GET /api/monitor/overview`
-- `GET /api/monitor/timeseries?metric=cpu|memory|disk|gpu&range=1h|6h|24h&step=30s|1m`
+- `GET /api/system/tenants`
+- `POST /api/system/tenants`
+- `POST /api/system/tenants/{tenantId}/members`
 
-Mock Prometheus 内部接口，仅供后端调用：
+## Tests
 
-- `GET /api/v1/query`
-- `GET /api/v1/query_range`
-
-## 数据模型
-
-- `Tenant`
-- `User`
-- `TenantMembership`
-- `RefreshTokenSession`
-
-数据库迁移初始 SQL 位于 [backend/migrations/001_initial_schema.sql](/e:/source/code/python3/AI-control/backend/migrations/001_initial_schema.sql:1)。
-
-## 测试
-
-后端测试：
+Backend tests:
 
 ```bash
 cd backend
 pytest
 ```
 
-前端测试：
+Frontend tests:
 
 ```bash
 cd frontend
 npm test
 ```
 
-Mock Prometheus 测试：
+Mock Prometheus tests:
 
 ```bash
 cd mock-prometheus
 pytest
+```
+
+Docker-based backend test example:
+
+```bash
+docker run --rm -v "%cd%/backend/tests:/app/tests:ro" ai-control-backend sh -lc "PYTHONPATH=/app pytest tests -q"
+```
+
+## Troubleshooting
+
+### `/api/model-monitor/overview` returns 502
+
+The backend could not query Prometheus. Check that these services are running:
+
+```bash
+docker compose ps
+```
+
+Required services:
+
+- `prometheus`
+- `ollama-exporter`
+- `backend`
+
+Start missing services:
+
+```bash
+docker compose up -d node-exporter ollama-exporter prometheus
+```
+
+Verify:
+
+```bash
+curl http://127.0.0.1:9090/-/healthy
+curl http://127.0.0.1:9500/health
+```
+
+### Model monitor shows empty data
+
+Check that Ollama is running on the host:
+
+```bash
+curl http://127.0.0.1:11434/api/ps
+```
+
+If no model is loaded, run a model once:
+
+```bash
+ollama run llama3.1:8b
+```
+
+Then refresh `/models`.
+
+## Kubernetes Deployment
+
+The base K8S manifests include an in-cluster Ollama runtime:
+
+- Service: `ollama:11434`
+- StatefulSet: `ollama`
+- Persistent volume claim: `ollama-data`
+
+The backend still calls Ollama through `ollama-exporter`:
+
+```env
+OLLAMA_BASE_URL=http://ollama-exporter:9500
+OLLAMA_EXPORTER_TARGET_URL=http://ollama:11434
+```
+
+After deploying to Kubernetes, pull a model into the Ollama pod before running analysis:
+
+```bash
+kubectl exec -n ai-monitor statefulset/ollama -- ollama pull llama3.1:8b
+```
+
+For local Docker Desktop Kubernetes:
+
+```bash
+kubectl apply -n ai-monitor -k k8s
+kubectl get pods -n ai-monitor
+```
+
+### Prometheus target is missing
+
+Restart Prometheus so it reloads `infra/prometheus/prometheus.yml`:
+
+```bash
+docker compose restart prometheus
+```
+
+Then open:
+
+```text
+http://127.0.0.1:9090/targets
 ```

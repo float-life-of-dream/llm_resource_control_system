@@ -39,4 +39,21 @@ describe("monitor api", () => {
     const result = await fetchTimeseries("gpu", "1h", "1m");
     expect(result.series[0].unit).toBe("MiB");
   });
+
+  it("fetches gpu depth timeseries", async () => {
+    vi.mocked(http.get).mockResolvedValueOnce({
+      data: {
+        metric: "gpu_utilization",
+        range: "1h",
+        step: "1m",
+        series: [],
+      },
+    });
+
+    await fetchTimeseries("gpu_utilization", "1h", "1m");
+
+    expect(http.get).toHaveBeenCalledWith("/monitor/timeseries", {
+      params: { metric: "gpu_utilization", range: "1h", step: "1m" },
+    });
+  });
 });

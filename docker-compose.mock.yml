@@ -10,3 +10,7 @@ services:
       context: ./mock-prometheus
     ports:
       - "9090:9090"
+
+  prometheus:
+    profiles:
+      - real-prometheus

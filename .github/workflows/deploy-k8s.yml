@@ -28,6 +28,7 @@ env:
   REGISTRY: ghcr.io
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ai-control-frontend
   BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ai-control-backend
+  OLLAMA_EXPORTER_IMAGE: ghcr.io/${{ github.repository_owner }}/ai-control-ollama-exporter
   CONFIGMAP_NAME: ai-monitor-config
   SECRET_NAME: ai-monitor-secrets
   PULL_SECRET_NAME: ghcr-auth
@@ -48,9 +49,12 @@ jobs:
       BOOTSTRAP_DEFAULT_TENANT_SLUG: ${{ vars.BOOTSTRAP_DEFAULT_TENANT_SLUG || 'default' }}
       PROMETHEUS_BASE_URL: ${{ vars.PROMETHEUS_BASE_URL || 'http://prometheus:9090' }}
       PROMETHEUS_TIMEOUT: ${{ vars.PROMETHEUS_TIMEOUT || '5' }}
-      OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL || 'http://ollama:11434' }}
+      OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL || 'http://ollama-exporter:9500' }}
       OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.1:8b' }}
       OLLAMA_TIMEOUT: ${{ vars.OLLAMA_TIMEOUT || '30' }}
+      OLLAMA_EXPORTER_TARGET_URL: ${{ vars.OLLAMA_EXPORTER_TARGET_URL || 'http://ollama:11434' }}
+      OLLAMA_EXPORTER_TIMEOUT: ${{ vars.OLLAMA_EXPORTER_TIMEOUT || '10' }}
+      OLLAMA_EXPORTER_PORT: ${{ vars.OLLAMA_EXPORTER_PORT || '9500' }}
       ELASTICSEARCH_BASE_URL: ${{ vars.ELASTICSEARCH_BASE_URL || 'http://elasticsearch:9200' }}
       ELASTICSEARCH_INDEX: ${{ vars.ELASTICSEARCH_INDEX || 'logs-*' }}
       ELASTICSEARCH_TIMEOUT: ${{ vars.ELASTICSEARCH_TIMEOUT || '10' }}
@@ -112,6 +116,9 @@ jobs:
             --from-literal=OLLAMA_BASE_URL="${OLLAMA_BASE_URL}" \
             --from-literal=OLLAMA_MODEL="${OLLAMA_MODEL}" \
             --from-literal=OLLAMA_TIMEOUT="${OLLAMA_TIMEOUT}" \
+            --from-literal=OLLAMA_EXPORTER_TARGET_URL="${OLLAMA_EXPORTER_TARGET_URL}" \
+            --from-literal=OLLAMA_EXPORTER_TIMEOUT="${OLLAMA_EXPORTER_TIMEOUT}" \
+            --from-literal=OLLAMA_EXPORTER_PORT="${OLLAMA_EXPORTER_PORT}" \
             --from-literal=ELASTICSEARCH_BASE_URL="${ELASTICSEARCH_BASE_URL}" \
             --from-literal=ELASTICSEARCH_INDEX="${ELASTICSEARCH_INDEX}" \
             --from-literal=ELASTICSEARCH_TIMEOUT="${ELASTICSEARCH_TIMEOUT}" \
@@ -142,9 +149,11 @@ jobs:
         run: |
           kubectl set image deployment/ai-monitor-backend backend="${BACKEND_IMAGE}:${IMAGE_TAG}" -n "${KUBE_NAMESPACE}"
           kubectl set image deployment/ai-monitor-frontend frontend="${FRONTEND_IMAGE}:${IMAGE_TAG}" -n "${KUBE_NAMESPACE}"
+          kubectl set image deployment/ollama-exporter ollama-exporter="${OLLAMA_EXPORTER_IMAGE}:${IMAGE_TAG}" -n "${KUBE_NAMESPACE}"
 
       - name: Wait for rollout
         run: |
           kubectl rollout status deployment/ai-monitor-backend -n "${KUBE_NAMESPACE}" --timeout=180s
           kubectl rollout status deployment/ai-monitor-frontend -n "${KUBE_NAMESPACE}" --timeout=180s
+          kubectl rollout status deployment/ollama-exporter -n "${KUBE_NAMESPACE}" --timeout=180s
           kubectl rollout status statefulset/postgres -n "${KUBE_NAMESPACE}" --timeout=180s

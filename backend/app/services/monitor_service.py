@@ -28,6 +28,36 @@ METRIC_CONFIG = {
         "overview_query": "sum(DCGM_FI_DEV_FB_USED)",
         "timeseries_query": "sum(DCGM_FI_DEV_FB_USED)",
     },
+    "gpu_memory_used": {
+        "label": "GPU Memory",
+        "unit": "MiB",
+        "overview_query": "sum(DCGM_FI_DEV_FB_USED)",
+        "timeseries_query": "sum(DCGM_FI_DEV_FB_USED)",
+    },
+    "gpu_memory_utilization": {
+        "label": "GPU Memory %",
+        "unit": "%",
+        "overview_query": "100 * sum(DCGM_FI_DEV_FB_USED) / clamp_min(sum(DCGM_FI_DEV_FB_TOTAL), 1)",
+        "timeseries_query": "100 * sum(DCGM_FI_DEV_FB_USED) / clamp_min(sum(DCGM_FI_DEV_FB_TOTAL), 1)",
+    },
+    "gpu_utilization": {
+        "label": "GPU Utilization",
+        "unit": "%",
+        "overview_query": "avg(DCGM_FI_DEV_GPU_UTIL)",
+        "timeseries_query": "avg(DCGM_FI_DEV_GPU_UTIL)",
+    },
+    "gpu_temperature": {
+        "label": "GPU Temperature",
+        "unit": "C",
+        "overview_query": "avg(DCGM_FI_DEV_GPU_TEMP)",
+        "timeseries_query": "avg(DCGM_FI_DEV_GPU_TEMP)",
+    },
+    "gpu_power_usage": {
+        "label": "GPU Power",
+        "unit": "W",
+        "overview_query": "avg(DCGM_FI_DEV_POWER_USAGE)",
+        "timeseries_query": "avg(DCGM_FI_DEV_POWER_USAGE)",
+    },
 }
 
 RANGE_TO_DELTA = {"1h": timedelta(hours=1), "6h": timedelta(hours=6), "24h": timedelta(hours=24)}

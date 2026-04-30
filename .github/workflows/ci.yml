@@ -79,3 +79,6 @@ jobs:
 
       - name: Build mock-prometheus image
         run: docker build -t ai-control-mock-prometheus ./mock-prometheus
+
+      - name: Build ollama-exporter image
+        run: docker build -t ai-control-ollama-exporter ./ollama-exporter
