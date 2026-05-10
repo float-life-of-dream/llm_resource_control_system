@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-exporter
+  labels:
+    app: ollama-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-exporter
+  template:
+    metadata:
+      labels:
+        app: ollama-exporter
+    spec:
+      imagePullSecrets:
+        - name: ghcr-auth
+      containers:
+        - name: ollama-exporter
+          image: ghcr.io/float-life-of-dream/ai-control-ollama-exporter:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 9500
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9500
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9500
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          envFrom:
+            - configMapRef:
+                name: ai-monitor-config
+            - secretRef:
+                name: ai-monitor-secrets

@@ -9,6 +9,10 @@ vi.mock("../api/monitor", () => ({
     generatedAt: "2026-04-21T15:00:00Z",
     items: [{ metric: "cpu", label: "CPU", value: 42.5, unit: "%" }],
   }),
+  fetchGpuDevices: vi.fn().mockResolvedValue({
+    generatedAt: "2026-04-21T15:00:00Z",
+    items: [],
+  }),
   fetchTimeseries: vi.fn().mockResolvedValue({
     metric: "cpu",
     range: "1h",
@@ -31,6 +35,8 @@ describe("DashboardView", () => {
           StatCard: { template: "<div>Stat Card</div>" },
           AnalysisPanel: { template: "<div>AI Analysis</div>" },
           MonitorChart: { template: "<div>Monitor Chart</div>" },
+          "el-table": { template: "<div><slot /></div>" },
+          "el-table-column": true,
           "el-segmented": true,
           "el-alert": true,
         },

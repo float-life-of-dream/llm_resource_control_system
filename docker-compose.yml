@@ -24,7 +24,7 @@ services:
       BOOTSTRAP_DEFAULT_TENANT_SLUG: ${BOOTSTRAP_DEFAULT_TENANT_SLUG:-default}
       PROMETHEUS_BASE_URL: ${PROMETHEUS_BASE_URL:-http://prometheus:9090}
       PROMETHEUS_TIMEOUT: ${PROMETHEUS_TIMEOUT:-5}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama-exporter:9500}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-30}
       ELASTICSEARCH_BASE_URL: ${ELASTICSEARCH_BASE_URL:-http://host.docker.internal:9200}
@@ -41,6 +41,41 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_monitor}
     depends_on:
       - postgres
+
+  ollama-exporter:
+    build:
+      context: ./ollama-exporter
+    environment:
+      OLLAMA_EXPORTER_TARGET_URL: ${OLLAMA_EXPORTER_TARGET_URL:-http://host.docker.internal:11434}
+      OLLAMA_EXPORTER_TIMEOUT: ${OLLAMA_EXPORTER_TIMEOUT:-10}
+      OLLAMA_EXPORTER_PORT: ${OLLAMA_EXPORTER_PORT:-9500}
+    ports:
+      - "9500:9500"
+
+  prometheus:
+    image: prom/prometheus:v2.53.3
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - backend
+      - node-exporter
+      - ollama-exporter
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    command:
+      - "--path.rootfs=/host"
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+    pid: host
+    volumes:
+      - /:/host:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
 
   postgres:
     image: postgres:16-alpine

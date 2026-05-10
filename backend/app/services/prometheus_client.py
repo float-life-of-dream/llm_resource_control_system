@@ -28,7 +28,13 @@ class PrometheusClient:
             },
         )
 
-    def _request(self, path: str, params: dict):
+    def health(self):
+        return self._request("/api/v1/status/runtimeinfo")
+
+    def targets(self):
+        return self._request("/api/v1/targets")
+
+    def _request(self, path: str, params: dict | None = None):
         try:
             response = requests.get(
                 f"{self.base_url.rstrip('/')}{path}",
@@ -46,4 +52,3 @@ class PrometheusClient:
             raise PrometheusClientError(payload.get("error", "Prometheus returned an error"))
 
         return payload.get("data", {})
-

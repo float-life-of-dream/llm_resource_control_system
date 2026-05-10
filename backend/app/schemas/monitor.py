@@ -21,6 +21,24 @@ class OverviewResponseSchema(Schema):
     items = fields.List(fields.Nested(OverviewItemSchema), required=True)
 
 
+class GpuDeviceSchema(Schema):
+    id = fields.String(required=True)
+    name = fields.String(required=True)
+    uuid = fields.String(required=True)
+    memoryUsedMiB = fields.Float(required=True)
+    memoryTotalMiB = fields.Float(required=True)
+    memoryUtilizationPercent = fields.Float(required=True)
+    utilizationPercent = fields.Float(required=True)
+    temperatureCelsius = fields.Float(required=True)
+    powerUsageWatts = fields.Float(required=True)
+    status = fields.String(required=True)
+
+
+class GpuDeviceListResponseSchema(Schema):
+    generatedAt = fields.DateTime(required=True)
+    items = fields.List(fields.Nested(GpuDeviceSchema), required=True)
+
+
 class SeriesPointSchema(Schema):
     timestamp = fields.DateTime(required=True)
     value = fields.Float(required=True)
@@ -35,7 +53,21 @@ class TimeseriesResponseSchema(Schema):
 
 
 class TimeseriesQuerySchema(Schema):
-    metric = fields.String(required=True, validate=validate.OneOf(["cpu", "memory", "disk", "gpu"]))
+    metric = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            [
+                "cpu",
+                "memory",
+                "disk",
+                "gpu",
+                "gpu_memory_used",
+                "gpu_memory_utilization",
+                "gpu_utilization",
+                "gpu_temperature",
+                "gpu_power_usage",
+            ]
+        ),
+    )
     range = fields.String(load_default="1h", validate=validate.OneOf(["1h", "6h", "24h"]))
     step = fields.String(load_default="1m", validate=validate.OneOf(["30s", "1m"]))
-

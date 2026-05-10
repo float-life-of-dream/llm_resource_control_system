@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from time import perf_counter
 
 from app.extensions.db import db
+from app.extensions.metrics import record_analysis_run
 from app.models import AnalysisEvidence, AnalysisResult, AnalysisSession, AnalysisStatus
 
 
@@ -78,6 +79,7 @@ class AnalysisService:
             db.session.add(result)
             db.session.commit()
             db.session.refresh(session)
+            record_analysis_run(success=True)
             return self._serialize_run_response(session)
         except Exception as exc:
             raw_output = getattr(exc, "raw_output", "")
@@ -106,6 +108,7 @@ class AnalysisService:
                     )
                 )
             db.session.commit()
+            record_analysis_run(success=False)
             raise AnalysisExecutionError(str(exc)) from exc
 
     def list_history(self, tenant_id: str):

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from time import perf_counter
 
 import requests
+
+from app.extensions.metrics import OLLAMA_REQUEST_DURATION_SECONDS
 
 
 class OllamaAnalysisError(RuntimeError):
@@ -26,6 +29,7 @@ class OllamaAnalysisService:
             "stream": False,
             "format": "json",
         }
+        started_at = perf_counter()
         try:
             response = requests.post(
                 f"{self.base_url.rstrip('/')}/api/generate",
@@ -34,9 +38,12 @@ class OllamaAnalysisService:
             )
             response.raise_for_status()
         except requests.Timeout as exc:
+            OLLAMA_REQUEST_DURATION_SECONDS.observe(perf_counter() - started_at)
             raise OllamaAnalysisError("Ollama request timed out") from exc
         except requests.RequestException as exc:
+            OLLAMA_REQUEST_DURATION_SECONDS.observe(perf_counter() - started_at)
             raise OllamaAnalysisError("Ollama request failed") from exc
+        OLLAMA_REQUEST_DURATION_SECONDS.observe(perf_counter() - started_at)
 
         body = response.json()
         raw_output = str(body.get("response", "")).strip()
