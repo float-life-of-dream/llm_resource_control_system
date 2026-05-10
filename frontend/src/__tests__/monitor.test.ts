@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fetchOverview, fetchTimeseries } from "../api/monitor";
+import { fetchGpuDevices, fetchOverview, fetchTimeseries } from "../api/monitor";
 import { http } from "../api/http";
 
 vi.mock("../api/http", () => ({
@@ -55,5 +55,18 @@ describe("monitor api", () => {
     expect(http.get).toHaveBeenCalledWith("/monitor/timeseries", {
       params: { metric: "gpu_utilization", range: "1h", step: "1m" },
     });
+  });
+
+  it("fetches gpu devices", async () => {
+    vi.mocked(http.get).mockResolvedValueOnce({
+      data: {
+        generatedAt: "2026-04-21T15:00:00Z",
+        items: [{ id: "GPU-1", name: "NVIDIA A100", uuid: "GPU-1" }],
+      },
+    });
+
+    await fetchGpuDevices();
+
+    expect(http.get).toHaveBeenCalledWith("/monitor/gpus");
   });
 });

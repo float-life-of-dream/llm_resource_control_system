@@ -32,6 +32,7 @@ class Tenant(db.Model):
     memberships = relationship("TenantMembership", back_populates="tenant", cascade="all, delete-orphan")
     refresh_sessions = relationship("RefreshTokenSession", back_populates="tenant")
     analysis_sessions = relationship("AnalysisSession", back_populates="tenant", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="tenant", cascade="all, delete-orphan")
 
 
 class User(db.Model):
@@ -49,6 +50,7 @@ class User(db.Model):
     memberships = relationship("TenantMembership", back_populates="user", cascade="all, delete-orphan")
     refresh_sessions = relationship("RefreshTokenSession", back_populates="user", cascade="all, delete-orphan")
     analysis_sessions = relationship("AnalysisSession", back_populates="user", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
 
 class TenantMembership(db.Model):
@@ -138,4 +140,45 @@ class AnalysisEvidence(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     session = relationship("AnalysisSession", back_populates="evidence")
+
+
+class ChatRole(str, enum.Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class ChatSession(db.Model):
+    __tablename__ = "chat_sessions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = db.Column(db.String(36), db.ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    model = db.Column(db.String(128), nullable=False)
+    is_deleted = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    tenant = relationship("Tenant", back_populates="chat_sessions")
+    user = relationship("User", back_populates="chat_sessions")
+    messages = relationship(
+        "ChatMessage",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="ChatMessage.created_at",
+    )
+
+
+class ChatMessage(db.Model):
+    __tablename__ = "chat_messages"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = db.Column(db.String(36), db.ForeignKey("chat_sessions.id"), nullable=False, index=True)
+    role = db.Column(db.Enum(ChatRole), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    raw_metadata = db.Column(db.JSON, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    session = relationship("ChatSession", back_populates="messages")
 

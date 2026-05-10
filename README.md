@@ -1,6 +1,6 @@
 # AI Resource Monitor
 
-`AI-control` is a Vue 3 + Flask + PostgreSQL monitoring console for AI runtime resources. It supports multi-tenant login, tenant-level RBAC, Prometheus-based host metrics, Ollama model monitoring, and Ollama-assisted log/metric analysis.
+`AI-control` is a Vue 3 + Flask + PostgreSQL monitoring console for AI runtime resources. It supports multi-tenant login, tenant-level RBAC, Prometheus-based host metrics, Ollama model monitoring, Elasticsearch log search, and Ollama-assisted log/metric analysis.
 
 ## Architecture
 
@@ -8,12 +8,10 @@
 AI-control/
 |-- backend/              # Flask API, auth, RBAC, monitor APIs, analysis APIs
 |-- frontend/             # Vue 3 + Vite + Element Plus + ECharts
-|-- mock-prometheus/      # Prometheus API mock for local demo mode
 |-- ollama-exporter/      # Ollama metadata and inference metric exporter
 |-- infra/prometheus/     # Prometheus scrape config
 |-- k8s/                  # Kubernetes manifests
 |-- docker-compose.yml
-|-- docker-compose.mock.yml
 |-- docker-compose.gpu.yml
 `-- .env.example
 ```
@@ -26,9 +24,11 @@ AI-control/
   - Tenant level: `owner / admin / viewer`
 - Protected monitor APIs. Users must log in before accessing monitor data.
 - Built-in Prometheus collector stack for local host metrics.
-- Optional mock Prometheus mode for stable local demo data.
 - Optional GPU metrics through `dcgm-exporter`.
+- Ollama chat page at `/chat`.
 - Ollama model monitor page at `/models`.
+- Prometheus status page at `/prometheus`.
+- Elasticsearch logs page at `/logs`.
 - Ollama + Elasticsearch powered AI analysis panel.
 
 ## Default Account
@@ -91,6 +91,14 @@ Main host metrics:
 - Ollama model and inference metrics: `ollama-exporter`
 - GPU metrics: optional `dcgm-exporter`
 
+The Prometheus status page is available at:
+
+```text
+/prometheus
+```
+
+It shows Prometheus connectivity, scrape target health, and the backend-supported metric catalog. The backend deliberately does not expose a raw PromQL proxy; frontend pages can only request fixed metric keys.
+
 ## Ollama Model Monitor
 
 The model monitor page is available at:
@@ -127,6 +135,58 @@ OLLAMA_BASE_URL=http://ollama-exporter:9500
 
 This routes backend Ollama analysis requests through the exporter so request rate, latency, concurrency, and tokens-per-second can be counted.
 
+## Ollama Chat
+
+The chat page is available at:
+
+```text
+/chat
+```
+
+Chat requests are sent to the backend and streamed to the browser using SSE. The backend calls:
+
+```env
+OLLAMA_BASE_URL=http://ollama-exporter:9500
+```
+
+Keep this value pointed at `ollama-exporter` if you want `/models` to show chat request rate, latency, concurrency, error rate, and tokens/sec. Pointing the backend directly at Ollama will still allow chat, but model monitor inference metrics will not include those requests.
+
+## Elasticsearch Logs
+
+The logs page is available at:
+
+```text
+/logs
+```
+
+The backend connects to an external Elasticsearch endpoint. This repository does not start Elasticsearch, Kibana, or Logstash by default.
+
+Required environment variables:
+
+```env
+ELASTICSEARCH_BASE_URL=http://localhost:9200
+ELASTICSEARCH_USERNAME=
+ELASTICSEARCH_PASSWORD=
+ELASTICSEARCH_INDEX=logs-*
+ELASTICSEARCH_TIMEOUT=10
+```
+
+Logs must include a tenant field so the API can enforce token-scoped tenant isolation. Supported tenant fields are:
+
+- `tenant_id`
+- `tenant.id`
+
+Recommended log fields:
+
+- `@timestamp`
+- `log.level` or `level`
+- `service.name` or `service`
+- `message`
+- `trace.id` or `traceId`
+- `host.name` or `host`
+
+The frontend never sends raw Elasticsearch DSL. It only calls the backend logs API with whitelisted filters.
+
 ## GPU Metrics
 
 GPU metrics are optional and require NVIDIA runtime support.
@@ -143,15 +203,18 @@ The GPU exporter exposes:
 dcgm-exporter:9400
 ```
 
-## Mock Demo Mode
+GPU data appears in two places:
 
-Mock mode replaces the backend Prometheus source with `mock-prometheus`.
+- Overview cards and GPU trend charts on `/`
+- Device-level GPU table on `/`
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d --build
-```
+The backend reads these DCGM metrics:
 
-This mode is for stable host-monitor demo data. It does not mock Ollama model monitoring. The model monitor still depends on a real Ollama exporter and a real or reachable Ollama instance.
+- `DCGM_FI_DEV_FB_USED`
+- `DCGM_FI_DEV_FB_TOTAL`
+- `DCGM_FI_DEV_GPU_UTIL`
+- `DCGM_FI_DEV_GPU_TEMP`
+- `DCGM_FI_DEV_POWER_USAGE`
 
 ## Key APIs
 
@@ -167,13 +230,34 @@ Auth:
 Host monitor:
 
 - `GET /api/monitor/overview`
-- `GET /api/monitor/timeseries?metric=cpu|memory|disk|gpu&range=1h|6h|24h&step=30s|1m`
+- `GET /api/monitor/timeseries?metric=cpu|memory|disk|gpu|gpu_memory_used|gpu_memory_utilization|gpu_utilization|gpu_temperature|gpu_power_usage&range=1h|6h|24h&step=30s|1m`
+- `GET /api/monitor/gpus`
 
 Model monitor:
 
 - `GET /api/model-monitor/overview`
 - `GET /api/model-monitor/models`
-- `GET /api/model-monitor/timeseries?metric=request_rate|latency|concurrency&range=1h|6h|24h&step=30s|1m`
+- `GET /api/model-monitor/timeseries?metric=request_rate|latency|concurrency|tokens_per_second|error_rate|loaded_models&range=1h|6h|24h&step=30s|1m`
+
+Prometheus status:
+
+- `GET /api/prometheus/health`
+- `GET /api/prometheus/targets`
+- `GET /api/prometheus/metrics`
+
+Chat:
+
+- `POST /api/chat/sessions`
+- `GET /api/chat/sessions`
+- `GET /api/chat/sessions/{sessionId}`
+- `POST /api/chat/sessions/{sessionId}/stream`
+- `DELETE /api/chat/sessions/{sessionId}`
+
+Logs:
+
+- `GET /api/logs/search?range=1h&query=timeout&level=error&service=backend&limit=100`
+- `GET /api/logs/summary?range=1h&query=timeout`
+- `GET /api/logs/services?range=24h`
 
 AI analysis:
 
@@ -212,18 +296,46 @@ cd frontend
 npm test
 ```
 
-Mock Prometheus tests:
-
-```bash
-cd mock-prometheus
-pytest
-```
-
 Docker-based backend test example:
 
 ```bash
 docker run --rm -v "%cd%/backend/tests:/app/tests:ro" ai-control-backend sh -lc "PYTHONPATH=/app pytest tests -q"
 ```
+
+## CI/CD
+
+GitHub Actions uses a protected branch workflow:
+
+- `CI` runs on pull requests to `main` and pushes to `main`.
+- `CI` covers backend tests, mock Prometheus tests, frontend tests/build, Docker image builds, Docker Compose validation, and K8S manifest rendering.
+- `Publish Images` runs only after `CI` succeeds on `main`, then publishes images to GHCR.
+- `Deploy K8S` is manually dispatched against a GitHub Environment such as `staging` or `production`.
+
+Published images:
+
+- `ghcr.io/<owner>/ai-control-backend`
+- `ghcr.io/<owner>/ai-control-frontend`
+- `ghcr.io/<owner>/ai-control-ollama-exporter`
+
+Published tags:
+
+- `latest`
+- `sha-<commit-sha>`
+
+Required GitHub Environment secrets for deploy:
+
+- `KUBE_CONFIG`
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `GHCR_USERNAME`
+- `GHCR_TOKEN`
+- `ELASTICSEARCH_USERNAME`
+- `ELASTICSEARCH_PASSWORD`
+
+`ELASTICSEARCH_USERNAME` and `ELASTICSEARCH_PASSWORD` may be empty if your Elasticsearch endpoint does not require basic auth.
 
 ## Troubleshooting
 
@@ -300,7 +412,13 @@ kubectl get pods -n ai-monitor
 
 ### Prometheus target is missing
 
-Restart Prometheus so it reloads `infra/prometheus/prometheus.yml`:
+Open `/prometheus` after logging in to inspect target health from the application. The same data is available from the backend:
+
+```bash
+curl -H "Authorization: Bearer <access-token>" http://127.0.0.1:8080/api/prometheus/targets
+```
+
+If a target is missing, restart Prometheus so it reloads `infra/prometheus/prometheus.yml`:
 
 ```bash
 docker compose restart prometheus
@@ -311,3 +429,10 @@ Then open:
 ```text
 http://127.0.0.1:9090/targets
 ```
+
+Expected jobs are:
+
+- `backend`
+- `node-exporter`
+- `ollama-exporter`
+- `dcgm-exporter` when GPU mode is enabled

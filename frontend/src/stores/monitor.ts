@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 
-import { fetchOverview, fetchTimeseries } from "../api/monitor";
-import type { MetricKey, OverviewItem, RangeKey, StepKey, TimeseriesPoint } from "../types/monitor";
+import { fetchGpuDevices, fetchOverview, fetchTimeseries } from "../api/monitor";
+import type { GpuDevice, MetricKey, OverviewItem, RangeKey, StepKey, TimeseriesPoint } from "../types/monitor";
 
 const DEFAULT_METRICS: MetricKey[] = [
   "cpu",
@@ -21,6 +21,7 @@ export const useMonitorStore = defineStore("monitor", {
     step: "1m" as StepKey,
     generatedAt: "",
     overview: [] as OverviewItem[],
+    gpuDevices: [] as GpuDevice[],
     seriesMap: {} as Record<MetricKey, TimeseriesPoint[]>,
     isLoading: false,
     error: "",
@@ -31,9 +32,10 @@ export const useMonitorStore = defineStore("monitor", {
       this.error = "";
 
       try {
-        const overview = await fetchOverview();
+        const [overview, gpuDevices] = await Promise.all([fetchOverview(), fetchGpuDevices()]);
         this.generatedAt = overview.generatedAt;
         this.overview = overview.items;
+        this.gpuDevices = gpuDevices.items;
 
         const responses = await Promise.all(
           DEFAULT_METRICS.map((metric) => fetchTimeseries(metric, this.range, this.step)),

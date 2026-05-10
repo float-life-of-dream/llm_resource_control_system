@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import DashboardView from "../views/DashboardView.vue";
+import ChatView from "../views/ChatView.vue";
 import LoginView from "../views/LoginView.vue";
+import LogsView from "../views/LogsView.vue";
 import ModelMonitorView from "../views/ModelMonitorView.vue";
+import PrometheusStatusView from "../views/PrometheusStatusView.vue";
 import SessionsView from "../views/SessionsView.vue";
 import SystemTenantsView from "../views/SystemTenantsView.vue";
 import TenantMembersView from "../views/TenantMembersView.vue";
@@ -14,7 +17,10 @@ export const router = createRouter({
   routes: [
     { path: "/login", name: "login", component: LoginView, meta: { public: true } },
     { path: "/", name: "dashboard", component: DashboardView },
+    { path: "/chat", name: "chat", component: ChatView },
     { path: "/models", name: "model-monitor", component: ModelMonitorView },
+    { path: "/prometheus", name: "prometheus-status", component: PrometheusStatusView },
+    { path: "/logs", name: "logs", component: LogsView },
     { path: "/tenant/members", name: "tenant-members", component: TenantMembersView, meta: { roles: ["owner", "admin"] } },
     { path: "/tenant/settings", name: "tenant-settings", component: TenantSettingsView, meta: { roles: ["owner", "admin"] } },
     { path: "/sessions", name: "sessions", component: SessionsView },

@@ -5,7 +5,12 @@ from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 
 from app.models import TenantRole
-from app.schemas.monitor import OverviewResponseSchema, TimeseriesQuerySchema, TimeseriesResponseSchema
+from app.schemas.monitor import (
+    GpuDeviceListResponseSchema,
+    OverviewResponseSchema,
+    TimeseriesQuerySchema,
+    TimeseriesResponseSchema,
+)
 from app.security import role_required
 from app.services.monitor_service import MonitorService
 from app.services.prometheus_client import PrometheusClient, PrometheusClientError
@@ -40,5 +45,16 @@ class TimeseriesResource(MethodView):
     def get(self, args):
         try:
             return _build_service().get_timeseries(args["metric"], args["range"], args["step"])
+        except PrometheusClientError as exc:
+            abort(502, message=str(exc))
+
+
+@blp.route("/gpus")
+class GpuDeviceResource(MethodView):
+    @role_required(TenantRole.OWNER, TenantRole.ADMIN, TenantRole.VIEWER)
+    @blp.response(200, GpuDeviceListResponseSchema)
+    def get(self):
+        try:
+            return _build_service().get_gpu_devices()
         except PrometheusClientError as exc:
             abort(502, message=str(exc))

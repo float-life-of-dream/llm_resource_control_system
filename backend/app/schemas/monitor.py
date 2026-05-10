@@ -21,6 +21,24 @@ class OverviewResponseSchema(Schema):
     items = fields.List(fields.Nested(OverviewItemSchema), required=True)
 
 
+class GpuDeviceSchema(Schema):
+    id = fields.String(required=True)
+    name = fields.String(required=True)
+    uuid = fields.String(required=True)
+    memoryUsedMiB = fields.Float(required=True)
+    memoryTotalMiB = fields.Float(required=True)
+    memoryUtilizationPercent = fields.Float(required=True)
+    utilizationPercent = fields.Float(required=True)
+    temperatureCelsius = fields.Float(required=True)
+    powerUsageWatts = fields.Float(required=True)
+    status = fields.String(required=True)
+
+
+class GpuDeviceListResponseSchema(Schema):
+    generatedAt = fields.DateTime(required=True)
+    items = fields.List(fields.Nested(GpuDeviceSchema), required=True)
+
+
 class SeriesPointSchema(Schema):
     timestamp = fields.DateTime(required=True)
     value = fields.Float(required=True)

@@ -13,8 +13,14 @@ spec:
       labels:
         app: dcgm-exporter
     spec:
+      tolerations:
+        - operator: Exists
       containers:
         - name: dcgm-exporter
           image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.9-3.6.1-ubuntu22.04
           ports:
             - containerPort: 9400
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi

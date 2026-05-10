@@ -74,3 +74,23 @@ CREATE TABLE analysis_evidence (
     log_excerpt JSON NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE chat_sessions (
+    id VARCHAR(36) PRIMARY KEY,
+    tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+    title VARCHAR(160) NOT NULL,
+    model VARCHAR(128) NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE chat_messages (
+    id VARCHAR(36) PRIMARY KEY,
+    session_id VARCHAR(36) NOT NULL REFERENCES chat_sessions(id),
+    role VARCHAR(32) NOT NULL,
+    content TEXT NOT NULL,
+    raw_metadata JSON NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);

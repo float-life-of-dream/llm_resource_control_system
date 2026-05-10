@@ -23,6 +23,24 @@ export interface OverviewResponse {
   items: OverviewItem[];
 }
 
+export interface GpuDevice {
+  id: string;
+  name: string;
+  uuid: string;
+  memoryUsedMiB: number;
+  memoryTotalMiB: number;
+  memoryUtilizationPercent: number;
+  utilizationPercent: number;
+  temperatureCelsius: number;
+  powerUsageWatts: number;
+  status: string;
+}
+
+export interface GpuDeviceListResponse {
+  generatedAt: string;
+  items: GpuDevice[];
+}
+
 export interface TimeseriesPoint {
   timestamp: string;
   value: number;

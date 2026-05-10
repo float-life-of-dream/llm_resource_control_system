@@ -55,7 +55,7 @@ jobs:
       OLLAMA_EXPORTER_TARGET_URL: ${{ vars.OLLAMA_EXPORTER_TARGET_URL || 'http://ollama:11434' }}
       OLLAMA_EXPORTER_TIMEOUT: ${{ vars.OLLAMA_EXPORTER_TIMEOUT || '10' }}
       OLLAMA_EXPORTER_PORT: ${{ vars.OLLAMA_EXPORTER_PORT || '9500' }}
-      ELASTICSEARCH_BASE_URL: ${{ vars.ELASTICSEARCH_BASE_URL || 'http://elasticsearch:9200' }}
+      ELASTICSEARCH_BASE_URL: ${{ vars.ELASTICSEARCH_BASE_URL || 'http://elasticsearch.example.local:9200' }}
       ELASTICSEARCH_INDEX: ${{ vars.ELASTICSEARCH_INDEX || 'logs-*' }}
       ELASTICSEARCH_TIMEOUT: ${{ vars.ELASTICSEARCH_TIMEOUT || '10' }}
       ANALYSIS_LOG_LIMIT_DEFAULT: ${{ vars.ANALYSIS_LOG_LIMIT_DEFAULT || '50' }}
@@ -75,6 +75,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          missing=0
+          for name in KUBE_CONFIG DATABASE_URL JWT_SECRET_KEY BOOTSTRAP_ADMIN_PASSWORD POSTGRES_USER POSTGRES_PASSWORD GHCR_USERNAME GHCR_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required secret or environment value: ${name}"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
@@ -156,4 +177,10 @@ jobs:
           kubectl rollout status deployment/ai-monitor-backend -n "${KUBE_NAMESPACE}" --timeout=180s
           kubectl rollout status deployment/ai-monitor-frontend -n "${KUBE_NAMESPACE}" --timeout=180s
           kubectl rollout status deployment/ollama-exporter -n "${KUBE_NAMESPACE}" --timeout=180s
+          kubectl rollout status statefulset/ollama -n "${KUBE_NAMESPACE}" --timeout=240s
           kubectl rollout status statefulset/postgres -n "${KUBE_NAMESPACE}" --timeout=180s
+
+      - name: Deployment summary
+        run: |
+          kubectl get pods,svc -n "${KUBE_NAMESPACE}"
+          echo "Deployed image tag: ${IMAGE_TAG}"
